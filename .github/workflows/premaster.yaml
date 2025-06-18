@@ -1,0 +1,75 @@
+name: Premaster‑QC
+
+# Trigger whenever a new WAV is pushed into the inbox/ folder
+on:
+  push:
+    paths:
+      - "inbox/**.wav"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write    # needed only if you want to commit processed files back
+
+    steps:
+      - name: Checkout (with LFS)
+        uses: actions/checkout@v4
+        with:
+          lfs: true              # grabs large WAVs if you use Git LFS
+
+      - name: Install audio toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y sox ffmpeg bwfmetaedit git-lfs python3-mutagen
+
+      - name: Process new WAV files
+        id: process
+        env:
+          ISRC: ${{ secrets.ISRC_CODE }}   # add an "ISRC_CODE" repo secret or leave empty
+        run: |
+          mkdir -p processed reports
+          # figure out which WAVs are *new* in this push
+          mapfile -t files < <(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E "\.wav$")
+
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No new WAV files, skipping."
+            exit 0
+          fi
+
+          for f in "${files[@]}"; do
+            base=$(basename "$f" .wav)
+            out="processed/${base}_premaster.wav"
+            echo "\n➡️  Processing $f → $out"
+
+            # 1. Render clean premaster (-3 dB headroom, 48 kHz, 24‑bit)
+            sox "$f" -b24 -r48000 "$out" gain -n -3 rate -v 48000 dither
+
+            # 2. Optional ISRC/BWF metadata
+            if [ -n "$ISRC" ]; then
+              bwfmetaedit --ISRC="$ISRC" "$out"
+            fi
+
+            # 3. QC report (LUFS + true‑peak)
+            rpt="reports/${base}_qc.txt"
+            ffmpeg -i "$out" -filter:a loudnorm=print_format=summary -f null - 2> "$rpt" || true
+            echo "   ↪ QC report saved to $rpt"
+          done
+
+      - name: Upload processed audio & QC logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: premaster_outputs
+          path: |
+            processed
+            reports
+
+      # OPTIONAL: auto‑commit the processed files back to repo (needs a PAT)
+      # - name: Commit processed files
+      #   if: steps.process.outcome == 'success'
+      #   run: |
+      #     git config --global user.email "actions@github.com"
+      #     git config --global user.name  "github‑actions"
+      #     git add processed reports
+      #     git commit -m "Add premaster and QC reports [skip ci]" || echo "Nothing to commit"
+      #     git push
