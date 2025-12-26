@@ -1,5 +1,12 @@
 # MusicDistro
-A github action set that prepares a wav file for upload to distrobution networds
+A complete automation toolkit for independent music distribution - from pre-mastering to social media distribution.
+
+## Features
+
+🎵 **GitHub Actions Pre-Mastering** - Automated WAV file preparation for distribution networks
+🚀 **n8n Social Media Distribution** - One-click distribution of HyperFollow links to all major social platforms
+📊 **Quality Control** - Automated LUFS and true-peak analysis
+🔗 **End-to-End Pipeline** - From raw mix to streaming platforms and social media
 
 
 Below is a practical end-to-end checklist you can fold into an automated “pre-master → Mixea → release” pipeline. Everything marked 🛠 Scriptable can be done from the command line (ffmpeg/sox/bwfmetaedit) or in Python (mutagen/pydub + ffmpeg).
@@ -144,4 +151,76 @@ Each Actions run tops out at 6 hours and 14 GB of RAM—plenty for audio but wor
 If you ever process >2 GB in one push, GitHub’s push hard-limit kicks in. 
 docs.github.com
 
-Feel free to tweak the YAML right in the canvas—let me know what else you’d like automated!
+Feel free to tweak the YAML right in the canvas—let me know what else you'd like automated!
+
+## Social Media Distribution with n8n
+
+After your music is live on streaming platforms, automate sharing your HyperFollow links across all social networks with our n8n workflow template.
+
+### Quick Start
+
+1. **Import the template**: `n8n-hyperfollow-distribution.json`
+2. **Configure credentials** for your social platforms (Twitter, Facebook, LinkedIn, Telegram, Discord)
+3. **Activate the workflow** and copy the webhook URL
+4. **Send a POST request** with your release details:
+
+```bash
+curl -X POST https://your-n8n.com/webhook/hyperfollow-distribute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hyperfollow_link": "https://hyperfollow.com/artist/song",
+    "artist_name": "Your Name",
+    "song_title": "Song Title",
+    "release_date": "2025-01-15",
+    "custom_message": "New music out now! 🎵"
+  }'
+```
+
+### Supported Platforms
+
+✅ Twitter/X | ✅ Facebook | ✅ LinkedIn | ✅ Telegram | ✅ Discord | ⚠️ Instagram*
+
+*Instagram requires a Business Account and image URL
+
+### Features
+
+- **Platform-optimized messages** - Tailored content for each social network
+- **Parallel posting** - Distribute to all platforms simultaneously
+- **Smart hashtag generation** - Automatic hashtags based on artist/song
+- **Error resilience** - Continues posting even if one platform fails
+- **Customizable templates** - Edit messages to match your brand voice
+
+📖 **Full documentation**: See `n8n-setup-guide.md` for complete setup instructions
+
+### Integration with GitHub Actions
+
+Combine pre-mastering and social distribution:
+
+```yaml
+- name: Distribute to Social Media
+  if: success()
+  run: |
+    curl -X POST ${{ secrets.N8N_WEBHOOK_URL }} \
+      -H "Content-Type: application/json" \
+      -d '{
+        "hyperfollow_link": "${{ secrets.HYPERFOLLOW_LINK }}",
+        "artist_name": "${{ secrets.ARTIST_NAME }}",
+        "song_title": "${{ github.event.head_commit.message }}",
+        "release_date": "$(date +%Y-%m-%d)"
+      }'
+```
+
+### Example Scripts
+
+- `examples/distribute.sh` - Bash script for command-line distribution
+- `examples/hyperfollow-webhook-payload.json` - Example payload template
+
+## Complete Workflow
+
+1. **Export** your mix as WAV from your DAW
+2. **Push** to GitHub → triggers pre-mastering action
+3. **Download** mastered WAV from GitHub artifacts
+4. **Upload** to DistroKid/Mixea
+5. **Get** your HyperFollow link when release goes live
+6. **Trigger** n8n workflow → instant social media distribution
+7. **Done!** All platforms updated simultaneously
