@@ -17,6 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true              # grabs large WAVs if you use Git LFS
+          fetch-depth: 0         # full history so git diff works on all pushes
 
       - name: Install audio toolchain
         run: |
@@ -26,34 +27,71 @@ jobs:
       - name: Process new WAV files
         id: process
         env:
-          ISRC: ${{ secrets.ISRC_CODE }}   # add an "ISRC_CODE" repo secret or leave empty
+          ISRC: ${{ secrets.ISRC_CODE }}       # add an "ISRC_CODE" repo secret or leave empty
+          ARTIST_NAME: ${{ secrets.ARTIST_NAME }}  # optional: artist name for WAV tags
+          SONG_TITLE: ${{ secrets.SONG_TITLE }}    # optional: song title for WAV tags
         run: |
           mkdir -p processed reports
-          # figure out which WAVs are *new* in this push
-          mapfile -t files < <(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E "\.wav$")
+
+          # Determine the comparison base: on the very first push to a branch,
+          # github.event.before is all zeros, so compare against the empty tree.
+          BEFORE="${{ github.event.before }}"
+          EMPTY_TREE="4b825dc642cb6eb9a060e54bf8d69288fbee4904"  # git's empty-tree object SHA
+          if [[ "$BEFORE" == "0000000000000000000000000000000000000000" ]]; then
+            BASE="$EMPTY_TREE"
+          else
+            BASE="$BEFORE"
+          fi
+
+          # Figure out which WAVs are *new* in this push
+          mapfile -t files < <(git diff --name-only "$BASE" "${{ github.sha }}" | grep -iE "\.wav$")
 
           if [ ${#files[@]} -eq 0 ]; then
-            echo "No new WAV files, skipping."
+            echo "No new WAV files detected in this push, skipping."
             exit 0
           fi
 
           for f in "${files[@]}"; do
             base=$(basename "$f" .wav)
             out="processed/${base}_premaster.wav"
-            echo "\n➡️  Processing $f → $out"
+            printf "\n➡️  Processing %s → %s\n" "$f" "$out"
 
             # 1. Render clean premaster (-3 dB headroom, 48 kHz, 24‑bit)
             sox "$f" -b24 -r48000 "$out" gain -n -3 rate -v 48000 dither
 
-            # 2. Optional ISRC/BWF metadata
+            # 2a. Optional ISRC via BWF MetaEdit
             if [ -n "$ISRC" ]; then
               bwfmetaedit --ISRC="$ISRC" "$out"
+            fi
+
+            # 2b. Optional artist / title tags via Python mutagen (ID3v2 in WAV)
+            if [ -n "$ARTIST_NAME" ] || [ -n "$SONG_TITLE" ] || [ -n "$ISRC" ]; then
+              python3 - "$out" "$ARTIST_NAME" "$SONG_TITLE" "$ISRC" <<'PYEOF'
+          import sys
+          from mutagen.wave import WAVE
+          from mutagen.id3 import TPE1, TIT2, TSRC
+
+          if len(sys.argv) < 5:
+              print("Usage: script.py <wav_path> <artist> <title> <isrc>", file=sys.stderr)
+              sys.exit(1)
+          wav_path, artist, title, isrc = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]          tags = WAVE(wav_path)
+          if tags.tags is None:
+              tags.add_tags()
+          if artist:
+              tags.tags.setall("TPE1", [TPE1(encoding=3, text=artist)])
+          if title:
+              tags.tags.setall("TIT2", [TIT2(encoding=3, text=title)])
+          if isrc:
+              tags.tags.setall("TSRC", [TSRC(encoding=3, text=isrc)])
+          tags.save()
+          print(f"  Tags written → artist={artist!r}  title={title!r}  isrc={isrc!r}")
+          PYEOF
             fi
 
             # 3. QC report (LUFS + true‑peak)
             rpt="reports/${base}_qc.txt"
             ffmpeg -i "$out" -filter:a loudnorm=print_format=summary -f null - 2> "$rpt" || true
-            echo "   ↪ QC report saved to $rpt"
+            printf "   ↪ QC report saved to %s\n" "$rpt"
           done
 
       - name: Upload processed audio & QC logs
