@@ -8,6 +8,22 @@ A complete automation toolkit for independent music distribution - from pre-mast
 📊 **Quality Control** - Automated LUFS and true-peak analysis
 🔗 **End-to-End Pipeline** - From raw mix to streaming platforms and social media
 
+---
+
+## 🚀 Quick Start
+
+**New to this workflow?** Read the **[Complete Workflow Guide](COMPLETE-WORKFLOW-GUIDE.md)** for step-by-step instructions from:
+- Downloading from Suno AI
+- Pre-mastering with GitHub Actions
+- Uploading to DistroKid/distributors
+- Distributing to all social media platforms
+
+**Experienced users?** Jump to:
+- [Audio Pre-Mastering](#1-render-a-clean-pre-master) (below)
+- [n8n Social Distribution](#social-media-distribution-with-n8n) (scroll down)
+
+---
+
 
 Below is a practical end-to-end checklist you can fold into an automated “pre-master → Mixea → release” pipeline. Everything marked 🛠 Scriptable can be done from the command line (ffmpeg/sox/bwfmetaedit) or in Python (mutagen/pydub + ffmpeg).
 
