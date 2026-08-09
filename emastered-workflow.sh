@@ -22,10 +22,11 @@ ARTIST_NAME="$2"
 SONG_TITLE="$3"
 RELEASE_DATE="${4:-$(date +%Y-%m-%d)}"
 HYPERFOLLOW_LINK="${5}"
+LYRICS_FILE="${6}"
 
 # Usage
 usage() {
-    echo "Usage: $0 <input.wav> <artist> <song_title> [release_date] [hyperfollow_link]"
+    echo "Usage: $0 <input.wav> <artist> <song_title> [release_date] [hyperfollow_link] [lyrics_file]"
     echo ""
     echo "Environment variables:"
     echo "  EMASTERED_EMAIL      Your eMastered email (required)"
@@ -136,6 +137,30 @@ if command -v ffmpeg &> /dev/null; then
 else
     echo -e "${YELLOW}⚠️  ffmpeg not installed - skipping quality check${NC}"
     echo "Install with: sudo apt-get install ffmpeg"
+fi
+
+# Step 3.5: Add Lyrics (if provided)
+if [ -n "$LYRICS_FILE" ] && [ -f "$LYRICS_FILE" ]; then
+    echo ""
+    echo -e "${BLUE}Step 3.5/5: Adding Lyrics Metadata...${NC}"
+
+    if command -v python3 &> /dev/null; then
+        python3 add-lyrics.py "$MASTERED_FILE" "$LYRICS_FILE"
+
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✅ Lyrics embedded in audio file${NC}"
+
+            # Also save lyrics as separate file for DistroKid upload
+            LYRICS_COPY="mastered/${ARTIST_NAME// /_}_-_${SONG_TITLE// /_}_lyrics.txt"
+            cp "$LYRICS_FILE" "$LYRICS_COPY"
+            echo -e "${GREEN}✅ Lyrics file saved: $LYRICS_COPY${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Python not found - skipping lyrics${NC}"
+        echo "Install: sudo apt install python3 && pip3 install mutagen"
+    fi
+elif [ -n "$LYRICS_FILE" ]; then
+    echo -e "${YELLOW}⚠️  Lyrics file not found: $LYRICS_FILE${NC}"
 fi
 
 # Step 4: Archive

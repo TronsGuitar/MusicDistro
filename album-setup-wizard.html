@@ -635,6 +635,18 @@
             <input type="text" id="isrc" placeholder="QM-ABC-12-34567" pattern="[A-Z]{2}-[A-Z0-9]{3}-\d{2}-\d{5}">
             <p class="help-text">International Standard Recording Code. Leave blank to auto-generate.</p>
           </div>
+
+          <div class="form-group">
+            <label for="lyrics">Lyrics <span class="label-optional">(Optional)</span></label>
+            <textarea id="lyrics" rows="8" placeholder="Verse 1:
+Walking down the street at midnight
+City lights are shining bright
+
+Chorus:
+We're dancing in the moonlight
+Nothing's gonna stop us now"></textarea>
+            <p class="help-text">Plain text or LRC format (time-synced). Will be embedded in metadata for Spotify, Apple Music, and other platforms.</p>
+          </div>
         </section>
 
         <!-- Step 2: Audio File -->
@@ -956,6 +968,7 @@
           formData.genre = document.getElementById('genre').value;
           formData.releaseDate = document.getElementById('releaseDate').value;
           formData.isrc = document.getElementById('isrc').value;
+          formData.lyrics = document.getElementById('lyrics').value;
           break;
         case 2:
           formData.workflow = document.querySelector('input[name="workflow"]:checked').value;
@@ -997,7 +1010,8 @@
           title: formData.songTitle,
           genre: formData.genre,
           releaseDate: formData.releaseDate,
-          isrc: formData.isrc
+          isrc: formData.isrc,
+          lyrics: formData.lyrics || ''
         },
         workflow: formData.workflow,
         distribution: {
@@ -1019,9 +1033,20 @@
       a.href = url;
       a.download = `${formData.artistName}_${formData.songTitle}_config.json`.replace(/\s+/g, '_');
       a.click();
+
+      // Also export lyrics as separate file if provided
+      if (formData.lyrics && formData.lyrics.trim()) {
+        const lyricsBlob = new Blob([formData.lyrics], { type: 'text/plain' });
+        const lyricsUrl = URL.createObjectURL(lyricsBlob);
+        const lyricsLink = document.createElement('a');
+        lyricsLink.href = lyricsUrl;
+        lyricsLink.download = `${formData.artistName}_${formData.songTitle}_lyrics.txt`.replace(/\s+/g, '_');
+        lyricsLink.click();
+      }
     }
 
     function exportScript() {
+      const hasLyrics = formData.lyrics && formData.lyrics.trim();
       const script = `#!/bin/bash
 # MusicDistro Setup Script
 # Generated: ${new Date().toISOString()}
@@ -1032,11 +1057,13 @@ SONG_TITLE="${formData.songTitle}"
 RELEASE_DATE="${formData.releaseDate}"
 HYPERFOLLOW_LINK="${formData.hyperfollowLink}"
 N8N_WEBHOOK="${formData.n8nWebhook}"
+${hasLyrics ? 'LYRICS_FILE="${ARTIST_NAME// /_}_-_${SONG_TITLE// /_}_lyrics.txt"' : ''}
 
 # Upload to GitHub (if using pre-mastering workflow)
 ${formData.workflow === 'premaster' ? `
 mkdir -p inbox
 cp your_audio_file.wav "inbox/\${ARTIST_NAME// /_}_-_\${SONG_TITLE// /_}.wav"
+${hasLyrics ? 'cp "$LYRICS_FILE" "inbox/"' : ''}
 git add inbox/
 git commit -m "Add new song: \${SONG_TITLE} for pre-mastering"
 git push origin main
@@ -1046,7 +1073,10 @@ git push origin main
   "path/to/mastered.wav" \\
   "\${ARTIST_NAME}" \\
   "\${SONG_TITLE}" \\
-  "\${HYPERFOLLOW_LINK}"
+  "\${HYPERFOLLOW_LINK}" \\
+  "\${RELEASE_DATE}" \\
+  "New music out now!" \\
+  ${hasLyrics ? '"\${LYRICS_FILE}"' : ''}
 `}
 
 # Distribute to social media (once HyperFollow link is ready)

@@ -8,6 +8,7 @@ SONG_TITLE="$3"
 HYPERFOLLOW_LINK="$4"
 RELEASE_DATE="${5:-$(date +%Y-%m-%d)}"
 CUSTOM_MESSAGE="${6:-New music out now! Check it out on all streaming platforms 🎵}"
+LYRICS_FILE="$7"
 N8N_WEBHOOK="${N8N_WEBHOOK_URL}"
 
 # Colors for output
@@ -19,14 +20,18 @@ NC='\033[0m' # No Color
 
 # Validate input
 if [ -z "$MASTERED_FILE" ] || [ -z "$ARTIST_NAME" ] || [ -z "$SONG_TITLE" ]; then
-    echo -e "${RED}Usage: $0 <mastered_file.wav> <artist_name> <song_title> [hyperfollow_link] [release_date] [custom_message]${NC}"
+    echo -e "${RED}Usage: $0 <mastered_file.wav> <artist_name> <song_title> [hyperfollow_link] [release_date] [custom_message] [lyrics_file]${NC}"
     echo ""
-    echo "Example:"
+    echo "Examples:"
     echo "  $0 my_song.wav 'Artist Name' 'Song Title'"
-    echo "  $0 my_song.wav 'Artist Name' 'Song Title' 'https://distrokid.com/hyperfollow/artist/song' '2025-01-15'"
+    echo "  $0 my_song.wav 'Artist Name' 'Song Title' 'https://distrokid.com/hyperfollow/artist/song'"
+    echo "  $0 my_song.wav 'Artist Name' 'Song Title' '' '2025-01-15' 'Custom message' 'lyrics.txt'"
     echo ""
     echo "Environment variables:"
     echo "  N8N_WEBHOOK_URL - Your n8n webhook endpoint (required for social distribution)"
+    echo ""
+    echo "Optional lyrics file:"
+    echo "  Pass path to .txt or .lrc file as 7th parameter to embed lyrics in metadata"
     exit 1
 fi
 
@@ -85,6 +90,40 @@ if command -v ffmpeg &> /dev/null; then
     echo ""
 else
     echo -e "${YELLOW}ℹ️  Install ffmpeg for quality checking: sudo apt-get install ffmpeg${NC}"
+    echo ""
+fi
+
+# Add lyrics if provided
+if [ -n "$LYRICS_FILE" ] && [ -f "$LYRICS_FILE" ]; then
+    echo -e "${BLUE}Adding lyrics metadata...${NC}"
+    echo ""
+
+    if command -v python3 &> /dev/null; then
+        python3 add-lyrics.py "$MASTERED_FILE" "$LYRICS_FILE"
+
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✅ Lyrics embedded in audio file${NC}"
+            echo ""
+            echo "💡 Tips:"
+            echo "   • Also upload lyrics file separately to DistroKid"
+            echo "   • Submit to Spotify for Artists for lyrics display"
+            echo ""
+        else
+            echo -e "${YELLOW}⚠️  Warning: Failed to add lyrics${NC}"
+            echo "   You can still upload the lyrics file separately to your distributor"
+            echo ""
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Python not found - skipping lyrics embedding${NC}"
+        echo "   Install Python 3 and mutagen to add lyrics automatically:"
+        echo "   sudo apt install python3"
+        echo "   pip3 install mutagen"
+        echo ""
+        echo "   You can still upload: $LYRICS_FILE separately to your distributor"
+        echo ""
+    fi
+elif [ -n "$LYRICS_FILE" ]; then
+    echo -e "${YELLOW}⚠️  Lyrics file specified but not found: $LYRICS_FILE${NC}"
     echo ""
 fi
 
