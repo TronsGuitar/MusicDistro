@@ -12,13 +12,62 @@ A complete automation toolkit for independent music distribution - from pre-mast
 
 ## 🚀 Quick Start
 
-**New to this workflow?** Read the **[Complete Workflow Guide](COMPLETE-WORKFLOW-GUIDE.md)** for step-by-step instructions from:
+Choose your workflow based on your starting point:
+
+### 📖 **Complete Beginner Workflow**
+**[Complete Workflow Guide](COMPLETE-WORKFLOW-GUIDE.md)** - Full step-by-step from Suno to social media:
 - Downloading from Suno AI
 - Pre-mastering with GitHub Actions
 - Uploading to DistroKid/distributors
 - Distributing to all social media platforms
 
-**Experienced users?** Jump to:
+### ⚡ **Fast Track: Pre-Mastered Files**
+**[Pre-Mastered Workflow](PRE-MASTERED-WORKFLOW.md)** - Skip GitHub Actions if your files are already mastered:
+- Quality check your mastered WAV
+- Upload directly to DistroKid
+- Distribute to social media with n8n
+- **Time saved: 5-10 minutes per release**
+
+Use the helper script:
+```bash
+chmod +x distribute-premastered.sh
+export N8N_WEBHOOK_URL="https://your-n8n.com/webhook/hyperfollow-distribute"
+
+./distribute-premastered.sh \
+  "path/to/mastered.wav" \
+  "Artist Name" \
+  "Song Title" \
+  "https://distrokid.com/hyperfollow/artist/song"
+```
+
+### 🎛️ **eMastered AI Integration** (NEW!)
+**[eMastered Integration](EMASTERED-INTEGRATION.md)** - Professional AI mastering automation:
+- Automated mastering with eMastered.com Ultimate subscription
+- Browser automation via Playwright
+- Quality analysis and batch processing
+- Complete end-to-end workflow from Suno → eMastered → Distribution
+
+Quick start:
+```bash
+# Install dependencies
+npm install playwright
+npx playwright install chromium
+
+# Set credentials
+export EMASTERED_EMAIL="your-email@example.com"
+export EMASTERED_PASSWORD="your-password"
+
+# Run complete workflow
+chmod +x emastered-workflow.sh
+./emastered-workflow.sh \
+  "suno_track.wav" \
+  "Artist Name" \
+  "Song Title" \
+  "2025-01-15"
+```
+
+### 🎛️ **Experienced Users**
+Jump directly to:
 - [Audio Pre-Mastering](#1-render-a-clean-pre-master) (below)
 - [n8n Social Distribution](#social-media-distribution-with-n8n) (scroll down)
 
