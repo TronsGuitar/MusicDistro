@@ -40,6 +40,32 @@ export N8N_WEBHOOK_URL="https://your-n8n.com/webhook/hyperfollow-distribute"
   "https://distrokid.com/hyperfollow/artist/song"
 ```
 
+### 🎛️ **eMastered AI Integration** (NEW!)
+**[eMastered Integration](EMASTERED-INTEGRATION.md)** - Professional AI mastering automation:
+- Automated mastering with eMastered.com Ultimate subscription
+- Browser automation via Playwright
+- Quality analysis and batch processing
+- Complete end-to-end workflow from Suno → eMastered → Distribution
+
+Quick start:
+```bash
+# Install dependencies
+npm install playwright
+npx playwright install chromium
+
+# Set credentials
+export EMASTERED_EMAIL="your-email@example.com"
+export EMASTERED_PASSWORD="your-password"
+
+# Run complete workflow
+chmod +x emastered-workflow.sh
+./emastered-workflow.sh \
+  "suno_track.wav" \
+  "Artist Name" \
+  "Song Title" \
+  "2025-01-15"
+```
+
 ### 🎛️ **Experienced Users**
 Jump directly to:
 - [Audio Pre-Mastering](#1-render-a-clean-pre-master) (below)
